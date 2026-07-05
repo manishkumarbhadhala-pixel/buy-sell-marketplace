@@ -172,7 +172,7 @@ function AdminDashboard() {
                 className="flex flex-col sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr_1fr] sm:items-center gap-2 sm:gap-4 px-6 py-3 border-t border-gray-100 text-sm"
               >
                 <div className="flex items-center gap-3">
-                  <img src={`http://localhost:5000${p.image_url}`} alt={p.name} className="w-10 h-10 rounded-lg object-cover" />
+                  <img src={`${import.meta.env.VITE_API_URL}${p.image_url}`} alt={p.name} className="w-10 h-10 rounded-lg object-cover" />
                   <span className="font-medium text-gray-800 truncate">{p.name}</span>
                 </div>
                 <span className="text-gray-700">₹{p.price}</span>

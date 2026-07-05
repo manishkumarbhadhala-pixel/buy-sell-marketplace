@@ -38,7 +38,7 @@ function ProductDetail() {
           {/* Responsive Image Width & Heights */}
           <div className="md:w-1/2 bg-gray-100">
             <img
-              src={`http://localhost:5000${product.image_url}`}
+              src={`${import.meta.env.VITE_API_URL}${product.image_url}`}
               alt={product.name}
               className="w-full h-64 sm:h-80 md:h-full object-cover md:max-h-[420px]"
             />

@@ -68,7 +68,7 @@ function MyProducts() {
               >
                 <div className="flex items-center gap-3">
                   <img
-                    src={`http://localhost:5000${product.image_url}`}
+                    src={`${import.meta.env.VITE_API_URL}${product.image_url}`}
                     alt={product.name}
                     className="w-12 h-12 rounded-lg object-cover"
                   />

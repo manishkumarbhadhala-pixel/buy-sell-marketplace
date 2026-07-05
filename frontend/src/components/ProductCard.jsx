@@ -11,7 +11,7 @@ function ProductCard({ product }) {
       {/* ✅ Responsive Image Wrapper Height */}
       <div className="relative w-full h-32 sm:h-40 md:h-48 bg-gray-100 overflow-hidden">
         <img
-          src={`http://localhost:5000${product.image_url}`}
+         src={`${import.meta.env.VITE_API_URL}${product.image_url}`}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />

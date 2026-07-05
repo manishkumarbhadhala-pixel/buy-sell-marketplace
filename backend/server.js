@@ -20,7 +20,7 @@ app.use(helmet({
 
 // CORS - allow requests from frontend
 app.use(cors({
-  origin: 'http://localhost:5173', // React app's URL (update later for production)
+  origin: 'https://buy-sell-marketplace-blush.vercel.app',
   credentials: true
 }));
 

@@ -35,7 +35,7 @@ function EditProduct() {
           quantity: p.quantity,
           category_id: p.category_id || ''
         });
-        setPreview(`http://localhost:5000${p.image_url}`);
+        setPreview(`${import.meta.env.VITE_API_URL}${p.image_url}`);
         setCategories(categoryData.categories || []);
       } catch (error) {
         console.error("Data load karne me dikkat aayi:", error);
