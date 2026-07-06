@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react';
 import { getAllUsers, getAllProductsAdmin, deleteAnyProduct, deleteUser, toggleBlockUser } from '../api/adminApi';
-import { getAllCategories, addCategory, deleteCategory } from '../api/categoryApi';
+// ✅ Updated Imports: Added updateCategory
+import { getAllCategories, addCategory, deleteCategory, updateCategory } from '../api/categoryApi';
 
 function AdminDashboard() {
   const [tab, setTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [products, setProducts] = useState([]);
-  
-  // ✅ Added states for Category CRUD management
   const [categories, setCategories] = useState([]);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryMessage, setCategoryMessage] = useState('');
+
+  // ✅ Added states for inline category editing
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [editingCategoryName, setEditingCategoryName] = useState('');
   
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem('token');
 
-  // ✅ Updated fetchData to load categories concurrently using Promise.all
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -69,20 +71,18 @@ function AdminDashboard() {
     }
   };
 
-  // ✅ Added handler function to add category
   const handleAddCategory = async (e) => {
     e.preventDefault();
     setCategoryMessage('');
     try {
       await addCategory(newCategoryName, token);
       setNewCategoryName('');
-      fetchData(); // refresh list sequentially
+      fetchData();
     } catch (error) {
       setCategoryMessage(error.response?.data?.message || 'Failed to add category');
     }
   };
 
-  // ✅ Added handler function to delete category
   const handleDeleteCategory = async (id) => {
     if (!window.confirm('Delete this category? Products using it will lose their category link.')) return;
     try {
@@ -94,12 +94,31 @@ function AdminDashboard() {
     }
   };
 
+  // ✅ Added: Handler to trigger Edit mode with existing values
+  const handleEditClick = (cat) => {
+    setEditingCategoryId(cat.id);
+    setEditingCategoryName(cat.name);
+  };
+
+  // ✅ Added: Handler to submit the updated category name to backend
+  const handleUpdateCategory = async (id) => {
+    try {
+      await updateCategory(id, editingCategoryName, token);
+      setCategories((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, name: editingCategoryName } : c))
+      );
+      setEditingCategoryId(null); // Close editing mode
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to update category');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 px-4 sm:px-6 py-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-800 mb-2">Admin Dashboard</h1>
 
-        {/* ✅ Stats Section: Total Categories counter block added */}
+        {/* Stats Section */}
         <div className="flex gap-4 mb-6 text-sm">
           <div className="bg-white px-4 py-3 rounded-xl border border-gray-100">
             <p className="text-gray-500">Total Users</p>
@@ -115,7 +134,7 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* ✅ Tabs Menu Selection Layout with Categories added */}
+        {/* Tabs Menu */}
         <div className="flex gap-2 mb-4">
           <button
             onClick={() => setTab('users')}
@@ -237,7 +256,7 @@ function AdminDashboard() {
             ))}
           </div>
         ) : (
-          /* ✅ Replaced Content Section: New Categories Management tab UI added block */
+          /* Categories Management Tab */
           <div>
             {/* Add category form */}
             <form onSubmit={handleAddCategory} className="flex gap-3 mb-4">
@@ -259,7 +278,7 @@ function AdminDashboard() {
 
             {categoryMessage && <p className="text-red-500 text-sm mb-4">{categoryMessage}</p>}
 
-            {/* Categories list table view component */}
+            {/* ✅ Updated Categories list view table component supporting Inline Edit Mode */}
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               <div className="hidden sm:grid grid-cols-[3fr_1fr] gap-4 px-6 py-3 bg-gray-50 text-xs font-semibold text-gray-500 uppercase">
                 <span>Name</span>
@@ -268,15 +287,53 @@ function AdminDashboard() {
               {categories.map((cat) => (
                 <div
                   key={cat.id}
-                  className="flex justify-between items-center px-6 py-3 border-t border-gray-100 text-sm"
+                  className="flex justify-between items-center px-6 py-3 border-t border-gray-100 text-sm gap-3"
                 >
-                  <span className="font-medium text-gray-800">{cat.name}</span>
-                  <button
-                    onClick={() => handleDeleteCategory(cat.id)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition"
-                  >
-                    Delete
-                  </button>
+                  {editingCategoryId === cat.id ? (
+                    <input
+                      type="text"
+                      value={editingCategoryName}
+                      onChange={(e) => setEditingCategoryName(e.target.value)}
+                      className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                      autoFocus
+                    />
+                  ) : (
+                    <span className="font-medium text-gray-800">{cat.name}</span>
+                  )}
+
+                  <div className="flex gap-2">
+                    {editingCategoryId === cat.id ? (
+                      <>
+                        <button
+                          onClick={() => handleUpdateCategory(cat.id)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-600 hover:bg-green-100 transition"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingCategoryId(null)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-50 text-gray-600 hover:bg-gray-100 transition"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleEditClick(cat)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCategory(cat.id)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

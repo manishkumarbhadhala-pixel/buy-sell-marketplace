@@ -14,6 +14,13 @@ export const addCategory = async (name, token) => {
   return response.data;
 };
 
+export const updateCategory = async (id, name, token) => {
+  const response = await axiosInstance.put(`/categories/${id}`, { name }, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data;
+};
+
 export const deleteCategory = async (id, token) => {
   const response = await axiosInstance.delete(`/categories/${id}`, {
     headers: { Authorization: `Bearer ${token}` }

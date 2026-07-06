@@ -57,4 +57,33 @@ const deleteCategory = async (req, res) => {
   }
 };
 
-module.exports = { getAllCategories, addCategory, deleteCategory };
+// Admin only - update category name
+const updateCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+
+    if (!name || name.trim() === '') {
+      return res.status(400).json({ message: 'Category name is required' });
+    }
+
+    const [existing] = await pool.query('SELECT * FROM categories WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    const [duplicate] = await pool.query('SELECT * FROM categories WHERE name = ? AND id != ?', [name.trim(), id]);
+    if (duplicate.length > 0) {
+      return res.status(400).json({ message: 'Another category with this name already exists' });
+    }
+
+    await pool.query('UPDATE categories SET name = ? WHERE id = ?', [name.trim(), id]);
+
+    res.status(200).json({ message: 'Category updated successfully' });
+  } catch (error) {
+    console.error('Update category error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { getAllCategories, addCategory, deleteCategory, updateCategory };
