@@ -1,22 +1,32 @@
 import { useEffect, useState } from 'react';
 import { getAllUsers, getAllProductsAdmin, deleteAnyProduct, deleteUser, toggleBlockUser } from '../api/adminApi';
+import { getAllCategories, addCategory, deleteCategory } from '../api/categoryApi';
 
 function AdminDashboard() {
   const [tab, setTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [products, setProducts] = useState([]);
+  
+  // ✅ Added states for Category CRUD management
+  const [categories, setCategories] = useState([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [categoryMessage, setCategoryMessage] = useState('');
+  
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem('token');
 
+  // ✅ Updated fetchData to load categories concurrently using Promise.all
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [usersData, productsData] = await Promise.all([
+      const [usersData, productsData, categoriesData] = await Promise.all([
         getAllUsers(token),
-        getAllProductsAdmin(token)
+        getAllProductsAdmin(token),
+        getAllCategories(token)
       ]);
       setUsers(usersData.users || []);
       setProducts(productsData.products || []);
+      setCategories(categoriesData.categories || []);
     } catch (error) {
       console.error("Dashboard data load karne me error:", error);
     } finally {
@@ -48,7 +58,6 @@ function AdminDashboard() {
     }
   };
 
-  // ✅ Added: Dynamic Block/Unblock toggle event handler function
   const handleToggleBlock = async (id) => {
     try {
       const data = await toggleBlockUser(id, token);
@@ -60,11 +69,37 @@ function AdminDashboard() {
     }
   };
 
+  // ✅ Added handler function to add category
+  const handleAddCategory = async (e) => {
+    e.preventDefault();
+    setCategoryMessage('');
+    try {
+      await addCategory(newCategoryName, token);
+      setNewCategoryName('');
+      fetchData(); // refresh list sequentially
+    } catch (error) {
+      setCategoryMessage(error.response?.data?.message || 'Failed to add category');
+    }
+  };
+
+  // ✅ Added handler function to delete category
+  const handleDeleteCategory = async (id) => {
+    if (!window.confirm('Delete this category? Products using it will lose their category link.')) return;
+    try {
+      await deleteCategory(id, token);
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || 'Failed to delete category');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 px-4 sm:px-6 py-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-800 mb-2">Admin Dashboard</h1>
 
+        {/* ✅ Stats Section: Total Categories counter block added */}
         <div className="flex gap-4 mb-6 text-sm">
           <div className="bg-white px-4 py-3 rounded-xl border border-gray-100">
             <p className="text-gray-500">Total Users</p>
@@ -74,9 +109,13 @@ function AdminDashboard() {
             <p className="text-gray-500">Total Products</p>
             <p className="text-xl font-bold text-indigo-600">{products.length}</p>
           </div>
+          <div className="bg-white px-4 py-3 rounded-xl border border-gray-100">
+            <p className="text-gray-500">Total Categories</p>
+            <p className="text-xl font-bold text-indigo-600">{categories.length}</p>
+          </div>
         </div>
 
-        {/* Tabs */}
+        {/* ✅ Tabs Menu Selection Layout with Categories added */}
         <div className="flex gap-2 mb-4">
           <button
             onClick={() => setTab('users')}
@@ -94,12 +133,20 @@ function AdminDashboard() {
           >
             Products
           </button>
+          <button
+            onClick={() => setTab('categories')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${
+              tab === 'categories' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border border-gray-200'
+            }`}
+          >
+            Categories
+          </button>
         </div>
 
         {loading ? (
           <p className="text-gray-500">Loading...</p>
         ) : tab === 'users' ? (
-          /* ✅ Replaced Layout Block: Users Table with brand new Status Column & Layout */
+          /* Users Table */
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <div className="hidden sm:grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-4 px-6 py-3 bg-gray-50 text-xs font-semibold text-gray-500 uppercase">
               <span>Name</span>
@@ -156,7 +203,7 @@ function AdminDashboard() {
               </div>
             ))}
           </div>
-        ) : (
+        ) : tab === 'products' ? (
           /* Products Table list */
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-4 px-6 py-3 bg-gray-50 text-xs font-semibold text-gray-500 uppercase">
@@ -172,7 +219,7 @@ function AdminDashboard() {
                 className="flex flex-col sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr_1fr] sm:items-center gap-2 sm:gap-4 px-6 py-3 border-t border-gray-100 text-sm"
               >
                 <div className="flex items-center gap-3">
-                  <img src={p.image_url} alt={p.name} className="w-10 h-10 rounded-lg object-cover" />
+                  <img src={`http://localhost:5000${p.image_url}`} alt={p.name} className="w-10 h-10 rounded-lg object-cover" />
                   <span className="font-medium text-gray-800 truncate">{p.name}</span>
                 </div>
                 <span className="text-gray-700">₹{p.price}</span>
@@ -188,6 +235,51 @@ function AdminDashboard() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : (
+          /* ✅ Replaced Content Section: New Categories Management tab UI added block */
+          <div>
+            {/* Add category form */}
+            <form onSubmit={handleAddCategory} className="flex gap-3 mb-4">
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="New category name"
+                required
+                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              />
+              <button
+                type="submit"
+                className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
+              >
+                Add
+              </button>
+            </form>
+
+            {categoryMessage && <p className="text-red-500 text-sm mb-4">{categoryMessage}</p>}
+
+            {/* Categories list table view component */}
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <div className="hidden sm:grid grid-cols-[3fr_1fr] gap-4 px-6 py-3 bg-gray-50 text-xs font-semibold text-gray-500 uppercase">
+                <span>Name</span>
+                <span className="text-right">Action</span>
+              </div>
+              {categories.map((cat) => (
+                <div
+                  key={cat.id}
+                  className="flex justify-between items-center px-6 py-3 border-t border-gray-100 text-sm"
+                >
+                  <span className="font-medium text-gray-800">{cat.name}</span>
+                  <button
+                    onClick={() => handleDeleteCategory(cat.id)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
