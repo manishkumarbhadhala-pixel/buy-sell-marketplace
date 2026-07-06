@@ -20,7 +20,7 @@ app.use(helmet({
 
 // CORS - allow requests from frontend
 app.use(cors({
-  origin: 'https://buy-sell-marketplace.onrender.com',
+  origin: 'https://buy-sell-marketplace-blush.vercel.app',  // ✅ yeh frontend ka URL hona chahiye
   credentials: true
 }));
 
