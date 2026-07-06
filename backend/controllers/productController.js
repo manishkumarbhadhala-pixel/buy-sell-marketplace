@@ -1,8 +1,6 @@
 const pool = require('../config/db');
-const fs = require('fs');
-const path = require('path');
 
-// 1. ADD PRODUCT (Category support ke sath)
+// 1. ADD PRODUCT
 const addProduct = async (req, res) => {
   try {
     const { name, description, price, original_price, quantity, category_id } = req.body;
@@ -16,7 +14,7 @@ const addProduct = async (req, res) => {
       return res.status(400).json({ message: 'Category is required' });
     }
 
-    const imageUrl = req.file ? `/uploads/products/${req.file.filename}` : null;
+    const imageUrl = req.file ? req.file.path : null;
 
     const [result] = await pool.query(
       'INSERT INTO products (seller_id, name, description, price, original_price, quantity, image_url, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -35,7 +33,7 @@ const addProduct = async (req, res) => {
   }
 };
 
-// 2. GET ALL PRODUCTS — ✅ STEP 7: Category Filter & Category Name Support Added
+// 2. GET ALL PRODUCTS
 const getAllProducts = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -64,7 +62,7 @@ const getAllProducts = async (req, res) => {
     const totalPages = Math.ceil(totalProducts / limit);
 
     const [products] = await pool.query(
-      `SELECT products.id, products.name, products.price, products.quantity, 
+      `SELECT products.id, products.name, products.price, products.original_price, products.quantity, 
               products.image_url, products.created_at, categories.name AS category_name
        FROM products
        LEFT JOIN categories ON products.category_id = categories.id
@@ -91,7 +89,8 @@ const getMyProducts = async (req, res) => {
     const sellerId = req.user.userId;
 
     const [products] = await pool.query(
-      'select id , name , price , quantity , image_url , created_at from products where seller_id = ? order by created_at desc', [sellerId]
+      'SELECT id, name, price, original_price, quantity, image_url, created_at FROM products WHERE seller_id = ? ORDER BY created_at DESC',
+      [sellerId]
     );
 
     res.status(200).json({ products });
@@ -116,6 +115,7 @@ const getProductById = async (req, res) => {
         products.quantity, 
         products.image_url, 
         products.created_at,
+        products.category_id,
         users.name AS seller_name,
         users.phone AS seller_phone,
         categories.name AS category_name
@@ -138,7 +138,6 @@ const getProductById = async (req, res) => {
   }
 };
 
-// 5. UPDATE PRODUCT — ✅ STEP 6: Optional category_id Update Bypassed
 // 5. UPDATE PRODUCT
 const updateProduct = async (req, res) => {
   try {
@@ -158,16 +157,10 @@ const updateProduct = async (req, res) => {
       return res.status(403).json({ message: 'You are not authorized to update this product' });
     }
 
+    // Agar nayi image aayi hai to uska Cloudinary URL use karo, warna purani wali rakho
     let imageUrl = product.image_url;
-
     if (req.file) {
-      if (product.image_url) {
-        const oldImagePath = path.join(__dirname, '..', product.image_url);
-        fs.unlink(oldImagePath, (err) => {
-          if (err) console.error('Error deleting old image:', err.message);
-        });
-      }
-      imageUrl = `/uploads/products/${req.file.filename}`;
+      imageUrl = req.file.path;
     }
 
     const updatedName = name || product.name;
@@ -206,13 +199,6 @@ const deleteProduct = async (req, res) => {
 
     if (product.seller_id !== userId) {
       return res.status(403).json({ message: 'You are not authorized to delete this product' });
-    }
-
-    if (product.image_url) {
-      const imagePath = path.join(__dirname, '..', product.image_url);
-      fs.unlink(imagePath, (err) => {
-        if (err) console.error('Error deleting image file:', err.message);
-      });
     }
 
     await pool.query('DELETE FROM products WHERE id = ?', [id]);

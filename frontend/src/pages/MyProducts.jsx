@@ -67,8 +67,8 @@ function MyProducts() {
                 className="flex flex-col sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr] sm:items-center gap-3 sm:gap-4 px-6 py-4 border-t border-gray-100"
               >
                 <div className="flex items-center gap-3">
-                  <img
-                    src={`${import.meta.env.VITE_API_URL}${product.image_url}`}
+                 <img
+                    src={product.image_url}
                     alt={product.name}
                     className="w-12 h-12 rounded-lg object-cover"
                   />
